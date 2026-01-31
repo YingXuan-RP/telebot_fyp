@@ -51,7 +51,7 @@
             <span class="nav-text">Customers</span>
         </a>
 
-        <!-- ✅ Orders (NOW SIMPLE LINK) -->
+        <!-- ✅ Orders -->
         <a href="/orders" class="nav-item">
             <span class="nav-icon">📦</span>
             <span class="nav-text">Orders</span>
@@ -123,7 +123,7 @@
                 <!-- code -->
                 <td><%= d.code %></td>
 
-                <!-- type (human-readable) -->
+                <!-- type -->
                 <td>
                   <%= d.type === 'percentage'
                     ? 'Percentage (%)'
@@ -166,19 +166,12 @@
                     Edit
                   </a>
 
-                  <form
-                    action="/discounts/delete/<%= d.id %>"
-                    method="post"
-                    style="display:inline;"
-                  >
-                    <button
-                      type="submit"
-                      class="btn btn-small btn-danger"
-                      onclick="return confirm('Delete this discount?')"
-                    >
+                  <form action="/discounts/delete/<%= d.id %>" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-small btn-danger">
                       Delete
                     </button>
                   </form>
+
                 </td>
               </tr>
             <% }) %>

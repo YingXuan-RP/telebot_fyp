@@ -43,7 +43,7 @@
             <span class="nav-text">Categories</span>
         </a>
 
-        <!-- Products Dropdown (KEEP) -->
+        <!-- Products Dropdown -->
         <div class="nav-dropdown">
             <button class="nav-dropdown-toggle">
                 <div style="display:flex;align-items:center;">
@@ -65,7 +65,7 @@
             <span class="nav-text">Customers</span>
         </a>
 
-        <!-- ✅ Orders (NOW SIMPLE LINK) -->
+        <!-- Orders -->
         <a href="/orders" class="nav-item">
             <span class="nav-icon">📦</span>
             <span class="nav-text">Orders</span>
@@ -148,23 +148,32 @@
           ></small>
 
           <!-- Price and Quantity -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>Price ($)</label>
-              <input type="number" name="price" step="0.01" value="<%= product.price %>" required>
-            </div>
-            <div class="form-group">
-              <label>Quantity</label>
-              <input
-                type="number"
-                name="quantity"
-                min="0"
-                max="1000"
-                value="<%= product.quantity %>"
-                required
-              >
-            </div>
-          </div>
+<div class="form-row">
+  <div class="form-group">
+    <label>Price ($)</label>
+    <input
+      type="number"
+      name="price"
+      step="0.01"
+      min="0"
+      max="100000"
+      value="<%= product.price %>"
+      required
+    >
+  </div>
+
+  <div class="form-group">
+    <label>Quantity</label>
+    <input
+      type="number"
+      name="quantity"
+      min="0"
+      max="1000"
+      value="<%= product.stock %>"
+      required
+    >
+  </div>
+</div>
 
           <!-- Category -->
           <div class="form-group">
@@ -183,7 +192,7 @@
               <% if (product.images && product.images.length) { %>
                 <% product.images.forEach(function(img) { %>
                   <div class="draggable-img <%= img.image_url === product.image_url ? 'is-cover' : '' %>" data-id="<%= img.id %>">
-                    <img src="<%= product.image_url %>">
+                    <img src="<%= img.image_url %>">
                     <% if (img.image_url === product.image_url) { %>
                       <div class="cover-badge">COVER</div>
                     <% } %>
@@ -238,31 +247,37 @@
 
   // ===== COVER UI =====
   function updateCoverLabels() {
-    const wrappers = Array.from(existingImagesPreview.children);
+  const wrappers = Array.from(existingImagesPreview.children);
 
-    // clear all badges/borders
-    wrappers.forEach(w => {
-      w.classList.remove('is-cover');
-      const badge = w.querySelector('.cover-badge');
-      if (badge) badge.remove();
-      const img = w.querySelector('img');
-      if (img) img.style.border = '1px solid #ccc';
-    });
+  // clear badges/borders ONLY
+  wrappers.forEach(w => {
+    const badge = w.querySelector('.cover-badge');
+    if (badge) badge.remove();
 
-    // choose cover: the one marked is-cover, else first
-    const coverWrapper = wrappers.find(w => w.classList.contains('is-cover')) || wrappers[0];
-    if (!coverWrapper) return;
+    const img = w.querySelector('img');
+    if (img) img.style.border = '1px solid #ccc';
+  });
 
+  // choose cover: the one marked is-cover, else first
+  let coverWrapper = wrappers.find(w => w.classList.contains('is-cover'));
+
+  // if none marked, default to first
+  if (!coverWrapper && wrappers.length) {
+    coverWrapper = wrappers[0];
     coverWrapper.classList.add('is-cover');
-
-    const badge = document.createElement('div');
-    badge.classList.add('cover-badge');
-    badge.textContent = 'COVER';
-    coverWrapper.appendChild(badge);
-
-    const coverImg = coverWrapper.querySelector('img');
-    if (coverImg) coverImg.style.border = '2px solid #007BFF';
   }
+
+  if (!coverWrapper) return;
+
+  // add badge + highlight
+  const badge = document.createElement('div');
+  badge.classList.add('cover-badge');
+  badge.textContent = 'COVER';
+  coverWrapper.appendChild(badge);
+
+  const coverImg = coverWrapper.querySelector('img');
+  if (coverImg) coverImg.style.border = '2px solid #007BFF';
+}
 
   // ===== EXISTING: DELETE IMAGE (FIXED) =====
   existingImagesPreview.addEventListener('click', e => {
@@ -288,9 +303,9 @@
     updateCoverLabels();
   });
 
-  // ===== EXISTING: CLICK IMAGE TO SET COVER (FIXED - doesn't block delete) =====
+  // ===== EXISTING: CLICK IMAGE TO SET COVER =====
   existingImagesPreview.addEventListener('click', e => {
-    if (e.target.closest('.remove-existing')) return; // don't treat delete click as cover click
+    if (e.target.closest('.remove-existing')) return;
 
     const wrapper = e.target.closest('.draggable-img');
     if (!wrapper) return;
@@ -300,7 +315,7 @@
     updateCoverLabels();
   });
 
-  // ===== EXISTING: DRAG REORDER (keeps cover on moved item if it was cover) =====
+  // ===== EXISTING: DRAG REORDER =====
   Array.from(existingImagesPreview.children).forEach(w => {
     w.draggable = true;
 
@@ -397,8 +412,6 @@
         newFiles.forEach(f => dt.items.add(f));
         imageInput.files = dt.files;
 
-        // rebuild preview quickly by triggering change (optional)
-        // but we can just update labels
         updateNewImageCoverLabels();
       });
 

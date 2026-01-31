@@ -9,6 +9,14 @@ const fs = require('fs');
 
 const app = express();
 
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 /* ================= DATABASE ================= */
 require('dotenv').config();
 
@@ -30,7 +38,7 @@ console.log('✅ MySQL Pool created');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
@@ -409,112 +417,115 @@ app.get('/admin/products', ensureAdmin, (req, res) => {
 
 
 /* ================= ADD PRODUCT ================= */
+/* ================= ADD PRODUCT ================= */
 
 app.get('/admin/addproduct', ensureAdmin, (req, res) => {
-
   db.query('SELECT * FROM categories WHERE is_active = 1', (err, categories) => {
-
     res.render('addproduct', {
       categories,
       oldData: {},
       error: null
     });
-
   });
-
 });
 
-
 app.post('/admin/addproduct', ensureAdmin, upload.array('images', 10), (req, res) => {
-
   const { name, description, price, quantity, category_id } = req.body;
 
+  // basic required checks
   if (!name || !price || !quantity || !category_id || !req.files?.length) {
-
     return db.query('SELECT * FROM categories WHERE is_active = 1', (err, categories) => {
-
       res.render('addproduct', {
         categories,
         oldData: req.body,
         error: 'All fields + image required'
       });
-
     });
-
   }
 
+  // convert + validate numbers
+  const stock = Number(quantity);
+  const priceNum = Number(price);
+  const warehouse_stock = 15000;
+
+  if (Number.isNaN(stock) || stock < 0) return res.send('Invalid quantity');
+  if (Number.isNaN(priceNum) || priceNum < 0) return res.send('Invalid price');
+
+  // duplicate name check
   db.query(
     'SELECT id FROM products WHERE name = ? AND is_active = 1',
     [name],
     (err, results) => {
+      if (err) {
+        console.error(err);
+        return res.send('DB error');
+      }
 
-      if (results.length > 0) {
-
+      if (results?.length > 0) {
         return db.query('SELECT * FROM categories WHERE is_active = 1', (err2, categories) => {
-
           res.render('addproduct', {
             categories,
             oldData: req.body,
             error: 'Product already exists'
           });
-
         });
-
       }
 
-      db.query(`
-      INSERT INTO products (
-      name,
-      description,
-      price,
-      warehouse_stock,
-      stock,
-      category_id,
-      is_active
-      )
-      VALUES (?, ?, ?, ?, ?, ?, 1)
-      `,
-      [
-        name,
-        description || '',
-        price,
-        quantity,
-        quantity,
-        category_id
-      ],
-      (err3, result) => {
-
-        const productId = result.insertId;
-
-        const imagesToInsert = req.files.map(f => [
-          productId,
-          '/uploads/' + f.filename
-        ]);
-
-        db.query(
-          'INSERT INTO product_images (product_id, image_url) VALUES ?',
-          [imagesToInsert],
-          () => {
-
-            const coverIndex = parseInt(req.body.coverIndex) || 0;
-            const coverImageUrl = '/uploads/' + req.files[coverIndex].filename;
-
-            db.query(
-              'UPDATE products SET image_url = ? WHERE id = ?',
-              [coverImageUrl, productId],
-              () => res.redirect('/admin/products')
-            );
-
+      // ✅ INSERT product (IMPORTANT: pass the values array!)
+      db.query(
+        `
+        INSERT INTO products
+          (name, description, price, warehouse_stock, stock, category_id, is_active)
+        VALUES
+          (?, ?, ?, ?, ?, ?, 1)
+        `,
+        [name, description || '', priceNum, warehouse_stock, stock, category_id],
+        (err3, result) => {
+          if (err3) {
+            console.error(err3);
+            return res.send(err3.message);
           }
-        );
 
-      });
+          const productId = result.insertId;
 
+          // insert product images
+          const imagesToInsert = req.files.map(f => [productId, '/uploads/' + f.filename]);
+
+          db.query(
+            'INSERT INTO product_images (product_id, image_url) VALUES ?',
+            [imagesToInsert],
+            (err4) => {
+              if (err4) {
+                console.error(err4);
+                return res.send(err4.message);
+              }
+
+              // set cover image (default index 0)
+              const coverIndex = parseInt(req.body.coverIndex || '0', 10);
+              const safeCoverIndex = Number.isNaN(coverIndex)
+                ? 0
+                : Math.min(Math.max(coverIndex, 0), req.files.length - 1);
+
+              const coverImageUrl = '/uploads/' + req.files[safeCoverIndex].filename;
+
+              db.query(
+                'UPDATE products SET image_url = ? WHERE id = ?',
+                [coverImageUrl, productId],
+                (err5) => {
+                  if (err5) {
+                    console.error(err5);
+                    return res.send(err5.message);
+                  }
+                  res.redirect('/admin/products');
+                }
+              );
+            }
+          );
+        }
+      );
     }
   );
-
 });
-
 
 /* ================= EDIT PRODUCT ================= */
 
@@ -687,7 +698,7 @@ app.get('/admin/check-product-name', ensureAdmin, (req, res) => {
 });
 
 
-/* ================= DELETE PRODUCT (SOFT DELETE) ================= */
+/* ================= DELETE PRODUCT ================= */
 
 app.post('/admin/deleteproduct/:id', ensureAdmin, (req, res) => {
 
@@ -700,11 +711,6 @@ app.post('/admin/deleteproduct/:id', ensureAdmin, (req, res) => {
   );
 
 });
-
-
-
-
-
 
 /* ================= CATEGORIES ================= */
 app.get('/admin/categories', ensureAdmin, (req, res) => {
@@ -785,7 +791,7 @@ app.post('/admin/categories/add', ensureAdmin, (req, res) => {
     });
   }
 
-  // 🔒 Duplicate check (case-insensitive)
+  // DUPLICATE CHECK
   db.query(
     'SELECT id FROM categories WHERE LOWER(name) = LOWER(?)',
     [name.trim()],
@@ -803,7 +809,7 @@ app.post('/admin/categories/add', ensureAdmin, (req, res) => {
         });
       }
 
-      // ✅ Insert if unique
+      // UNIQUE IF UNIQUE
       db.query(
         `INSERT INTO categories (name, description, is_active)
          VALUES (?, ?, ?)`,
@@ -851,7 +857,7 @@ app.post('/admin/categories/edit/:id', ensureAdmin, (req, res) => {
     );
   }
 
-  // 🔒 Duplicate check (exclude itself)
+  // DUPLICATE CATEGORY NAME CHECK
   db.query(
     'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id != ?',
     [name.trim(), id],
@@ -871,7 +877,7 @@ app.post('/admin/categories/edit/:id', ensureAdmin, (req, res) => {
         });
       }
 
-      // ✅ Update if unique
+      // Update if unique
       db.query(
         `UPDATE categories
          SET name = ?, description = ?, is_active = ?, updated_at = NOW()
@@ -1031,7 +1037,6 @@ app.get('/api/analytics/top-products', ensureAdmin, (req, res) => {
 
 });
 
-
 /* =========================
    REVENUE BY CATEGORY
 ========================= */
@@ -1072,8 +1077,6 @@ app.get('/api/analytics/revenue-by-category', ensureAdmin, (req, res) => {
 
 });
 
-
-
 /* =========================
    SALES OVER TIME (Line Chart)
 ========================= */
@@ -1110,7 +1113,6 @@ app.get('/api/analytics/sales-over-time', ensureAdmin, (req, res) => {
   });
 
 });
-
 
 /* =========================
    TOP SELLING PRODUCTS
@@ -1155,7 +1157,6 @@ app.get('/api/analytics/top-products', ensureAdmin, (req, res) => {
 
 });
 
-
 /* =========================
    REVENUE BY CATEGORY
 ========================= */
@@ -1196,19 +1197,12 @@ app.get('/api/analytics/revenue-by-category', ensureAdmin, (req, res) => {
 
 });
 
-
-
-
-
-
-
-
 /* ================= Discounts ================= */
 
 /* ===== LIST ===== */
 app.get('/discounts', ensureAdmin, (req, res) => {
   db.query(
-    'SELECT * FROM discounts ORDER BY created_at DESC',
+    'SELECT * FROM discounts WHERE is_active = 1 ORDER BY created_at DESC',
     (err, results) => {
       if (err) {
         console.error("DISCOUNT LIST ERROR:", err);
@@ -1218,7 +1212,6 @@ app.get('/discounts', ensureAdmin, (req, res) => {
     }
   );
 });
-
 
 /* ===== ADD PAGE ===== */
 app.get('/discounts/add', ensureAdmin, (req, res) => {
@@ -1230,7 +1223,6 @@ app.get('/discounts/add', ensureAdmin, (req, res) => {
     }
   );
 });
-
 
 /* ===== ADD SUBMIT ===== */
 app.post('/discounts/add', ensureAdmin, (req, res) => {
@@ -1307,7 +1299,6 @@ app.post('/discounts/add', ensureAdmin, (req, res) => {
   );
 });
 
-
 /* ===== EDIT PAGE ===== */
 app.get('/discounts/edit/:id', ensureAdmin, (req, res) => {
 
@@ -1357,7 +1348,6 @@ app.get('/discounts/edit/:id', ensureAdmin, (req, res) => {
     }
   );
 });
-
 
 /* ===== EDIT SUBMIT ===== */
 app.post('/discounts/edit/:id', ensureAdmin, (req, res) => {
@@ -1454,25 +1444,20 @@ app.post('/discounts/edit/:id', ensureAdmin, (req, res) => {
   );
 });
 
-
 /* ===== DELETE ===== */
 app.post('/discounts/delete/:id', ensureAdmin, (req, res) => {
-
   db.query(
-    'UPDATE discounts SET is_active=0 WHERE id=?',
+    'UPDATE discounts SET is_active = 0 WHERE id = ?',
     [req.params.id],
-    (err) => {
-
+    err => {
       if (err) {
         console.error("DISCOUNT DELETE ERROR:", err);
         return res.status(500).send(err.message);
       }
-
       res.redirect('/discounts');
     }
   );
 });
-
 
 /* ================== Inventory ================== */
 app.get('/admin/inventory', ensureAdmin, (req, res) => {
@@ -1507,7 +1492,6 @@ app.get('/admin/inventory', ensureAdmin, (req, res) => {
   });
 
 });
-
 
 app.get('/admin/inventory/update/:id', ensureAdmin, (req, res) => {
   const productId = req.params.id;
@@ -1566,8 +1550,6 @@ app.post('/admin/inventory/update/:id', ensureAdmin, async (req, res) => {
   }
 
 });
-
-
 
 /* ================= USERS================= */
 app.get('/users', ensureAdmin, (req, res) => {
@@ -1655,7 +1637,6 @@ app.get('/orders', ensureAdmin, (req, res) => {
   });
 });
 
-
 /* ===== ORDER DETAILS ===== */
 app.get('/orders/:id', ensureAdmin, (req, res) => {
 
@@ -1706,9 +1687,6 @@ app.get('/orders/:id', ensureAdmin, (req, res) => {
 
 });
 
-
-
-
 /* ================= STOCK NOTIFICATIONS ================= */
 app.get('/api/notifications/stock', ensureAdmin, (req, res) => {
 
@@ -1754,7 +1732,6 @@ app.get('/api/notifications/stock', ensureAdmin, (req, res) => {
   });
 
 });
-
 
 /* ================= SERVER ================= */
 const PORT = process.env.PORT || 3000;
