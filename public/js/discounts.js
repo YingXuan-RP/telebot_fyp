@@ -1,5 +1,3 @@
-// public/js/discounts.js
-
 let discounts = [];
 let currentPage = 1;
 const pageSize = 10;
@@ -7,14 +5,41 @@ let editingId = null;
 
 /* ================= LOAD ================= */
 document.addEventListener('DOMContentLoaded', () => {
+
   loadDiscounts();
 
-  document.getElementById('createBtn').addEventListener('click', () => {
-    openCreateModal();
-  });
+  const createBtn = document.getElementById('createBtn');
+  if (createBtn) {
+    createBtn.addEventListener('click', openCreateModal);
+  }
 
-  document.getElementById('discountForm').addEventListener('submit', saveDiscount);
+  const form = document.getElementById('discountForm');
+  if (form) {
+    form.addEventListener('submit', saveDiscount);
+  }
+
+  // ⭐ Apply Scope Toggle
+  setupApplyScopeToggle();
+
 });
+
+/* ================= APPLY SCOPE TOGGLE ================= */
+function setupApplyScopeToggle() {
+  const radios = document.querySelectorAll("input[name='apply_scope']");
+  const multiBox = document.getElementById("categoryMultiBox");
+
+  if (!radios.length || !multiBox) return;
+
+  radios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.value === "selected" && radio.checked) {
+        multiBox.style.display = "block";
+      } else {
+        multiBox.style.display = "none";
+      }
+    });
+  });
+}
 
 /* ================= FETCH ================= */
 async function loadDiscounts() {
@@ -31,18 +56,22 @@ async function loadDiscounts() {
 /* ================= TABLE ================= */
 function renderTable() {
   const tbody = document.getElementById('discountsTableBody');
+  if (!tbody) return;
+
   tbody.innerHTML = '';
 
   const start = (currentPage - 1) * pageSize;
   const pageData = discounts.slice(start, start + pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center">No discounts found</td></tr>`;
+    tbody.innerHTML =
+      `<tr><td colspan="8" class="text-center">No discounts found</td></tr>`;
     return;
   }
 
   pageData.forEach(d => {
     const tr = document.createElement('tr');
+
     tr.innerHTML = `
       <td>${d.code}</td>
       <td>${d.type}</td>
@@ -56,10 +85,15 @@ function renderTable() {
         </span>
       </td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="editDiscount(${d.id})">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteDiscount(${d.id})">Delete</button>
+        <button class="btn btn-sm btn-primary" onclick="editDiscount(${d.id})">
+          Edit
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="deleteDiscount(${d.id})">
+          Delete
+        </button>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 
@@ -68,15 +102,20 @@ function renderTable() {
 
 /* ================= PAGINATION ================= */
 function updatePagination() {
-  document.getElementById('prevBtn').disabled = currentPage === 1;
-  document.getElementById('nextBtn').disabled = currentPage * pageSize >= discounts.length;
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
 
-  document.getElementById('prevBtn').onclick = () => {
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage * pageSize >= discounts.length;
+
+  prevBtn.onclick = () => {
     currentPage--;
     renderTable();
   };
 
-  document.getElementById('nextBtn').onclick = () => {
+  nextBtn.onclick = () => {
     currentPage++;
     renderTable();
   };
@@ -85,9 +124,11 @@ function updatePagination() {
 /* ================= MODAL ================= */
 function openCreateModal() {
   editingId = null;
+
   document.getElementById('modalTitle').innerText = 'Create Discount';
   document.getElementById('discountForm').reset();
   document.getElementById('isActive').checked = true;
+
   document.getElementById('discountModal').style.display = 'flex';
 }
 
@@ -96,6 +137,7 @@ function editDiscount(id) {
   if (!d) return;
 
   editingId = id;
+
   document.getElementById('modalTitle').innerText = 'Edit Discount';
 
   discountCode.value = d.code;
@@ -148,5 +190,6 @@ async function deleteDiscount(id) {
   if (!confirm('Delete this discount?')) return;
 
   await fetch(`/api/discounts/${id}`, { method: 'DELETE' });
+
   loadDiscounts();
 }

@@ -1,67 +1,154 @@
 document.addEventListener('DOMContentLoaded', () => {
-  fetch('/api/dashboard/summary')
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById('totalOrders').innerText = data.totalOrders;
-      document.getElementById('totalRevenue').innerText = `$${data.totalRevenue}`;
-      document.getElementById('totalProducts').innerText = data.totalProducts;
-      document.getElementById('totalCategories').innerText = data.totalCategories;
-      document.getElementById('productViews').innerText = data.productViews;
-      document.getElementById('conversionRate').innerText = data.conversionRate + '%';
-    });
 
-  fetch('/api/dashboard/low-stock')
-    .then(res => res.json())
-    .then(products => {
-      const list = document.getElementById('lowStockList');
-      list.innerHTML = '';
+  /* ================= HELPERS ================= */
 
-      if (products.length === 0) {
-        list.innerHTML = '<p>No low stock items 🎉</p>';
-        return;
-      }
+  const el = (id) => document.getElementById(id);
 
-      products.forEach(p => {
-        list.innerHTML += `<p>${p.name} (Stock: ${p.stock})</p>`;
-      });
-    });
+  const safeText = (id, value) => {
+    const e = el(id);
+    if (e) e.innerText = value;
+  };
 
-    fetch('/api/dashboard/out-of-stock')
-  .then(res => res.json())
-  .then(products => {
-    const alertBox = document.getElementById('outOfStockAlert');
-    const message = document.getElementById('outOfStockMessage');
+  const safeHTML = (id, value) => {
+    const e = el(id);
+    if (e) e.innerHTML = value;
+  };
 
-    if (products.length === 0) {
-      // No issue → hide alert
+  const safeWidth = (id, value) => {
+    const e = el(id);
+    if (e) e.style.width = value;
+  };
+
+  const fetchJSON = (url) =>
+    fetch(url).then(res => res.json()).catch(() => null);
+
+
+  /* ================= SUMMARY ================= */
+
+  fetchJSON('/api/dashboard/summary').then(data => {
+
+    if (!data) return;
+
+    const revenue = Number(data.totalRevenue || 0);
+
+    safeText('totalOrders', data.totalOrders || 0);
+    safeText('totalRevenue', `$${revenue.toFixed(2)}`);
+    safeText('totalProducts', data.totalProducts || 0);
+    safeText('totalCategories', data.totalCategories || 0);
+
+    /* ===== SALES TARGET PROGRESS ===== */
+    const target = 5000;
+    const percent = Math.min((revenue / target) * 100, 100);
+
+    safeText('salesTargetPercent', percent.toFixed(1) + '%');
+    safeWidth('salesTargetBar', percent + '%');
+    safeText('currentRevenue', `$${revenue.toFixed(2)}`);
+    safeText('targetRevenue', `$${target}`);
+
+  });
+
+
+  /* ================= LOW STOCK ================= */
+
+  fetchJSON('/api/dashboard/low-stock').then(products => {
+
+    const list = el('lowStockList');
+    if (!list) return;
+
+    if (!products || !products.length) {
+      list.innerHTML = '<p>No low stock items</p>';
+      return;
+    }
+
+    list.innerHTML = products
+      .map(p => `<p>${p.name} (Stock: ${p.stock})</p>`)
+      .join('');
+
+  });
+
+
+  /* ================= OUT OF STOCK ================= */
+
+  fetchJSON('/api/dashboard/out-of-stock').then(products => {
+
+    const alertBox = el('outOfStockAlert');
+    const message = el('outOfStockMessage');
+
+    if (!alertBox || !message) return;
+
+    if (!products || !products.length) {
       alertBox.style.display = 'none';
       return;
     }
 
-    // Build real message
-    const productNames = products.map(p => p.name).join(', ');
+    message.textContent =
+      `Out of stock: ${products.map(p => p.name).join(', ')}`;
 
-    message.textContent = `Out of stock: ${productNames}`;
     alertBox.style.display = 'flex';
+
   });
 
-  fetch('/api/dashboard/recent-orders')
-    .then(res => res.json())
-    .then(orders => {
-      const table = document.getElementById('recentOrdersTable');
-      table.innerHTML = '';
 
-      orders.forEach(o => {
-        table.innerHTML += `
-          <tr>
-            <td>#${o.id}</td>
-            <td>${o.username || 'Telegram User'}</td>
-            <td>${o.items}</td>
-            <td>$${o.total_amount}</td>
-            <td>${o.status}</td>
-            <td>${new Date(o.created_at).toLocaleDateString()}</td>
-          </tr>
-        `;
-      });
-    });
+  /* ================= RECENT ORDERS ================= */
+
+  fetchJSON('/api/dashboard/recent-orders').then(orders => {
+
+    const table = el('recentOrdersTable');
+    if (!table) return;
+
+    if (!orders || !orders.length) {
+      table.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center">No recent orders</td>
+        </tr>`;
+      return;
+    }
+
+    table.innerHTML = orders.map(o => `
+      <tr>
+        <td>#${o.id}</td>
+        <td>${o.customer_name || 'Telegram User'}</td>
+        <td>${o.items || 0}</td>
+        <td>$${Number(o.amount || 0).toFixed(2)}</td>
+        <td>${o.status}</td>
+        <td>${new Date(o.created_at).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+
+  });
+
+
+  /* ================= TOP CATEGORIES ================= */
+
+  fetchJSON('/api/dashboard/top-categories').then(categories => {
+
+    const container = el('topCategoriesList');
+    if (!container) return;
+
+    if (!categories || !categories.length) {
+      container.innerHTML = '<p>No category sales yet</p>';
+      return;
+    }
+
+    const max = Math.max(...categories.map(c => c.total));
+
+    container.innerHTML = categories.map(cat => {
+
+      const percent = max ? (cat.total / max) * 100 : 0;
+
+      return `
+        <div class="category-bar">
+          <div class="category-label">
+            <span>${cat.name}</span>
+            <span>$${Number(cat.total).toFixed(2)}</span>
+          </div>
+          <div class="category-bar-bg">
+            <div class="category-bar-fill" style="width:${percent}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  });
+
 });

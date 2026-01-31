@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('userModal');
   const modalCloseBtns = document.querySelectorAll('.modal-close');
   const userDetails = document.getElementById('userDetails');
-  const searchInput = document.getElementById('searchUsers');
 
   // ================= OPEN USER MODAL =================
   document.addEventListener('click', async (e) => {
@@ -43,15 +42,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ================= SEARCH USERS =================
-  searchInput.addEventListener('input', () => {
-    const filter = searchInput.value.toLowerCase();
-    const rows = document.querySelectorAll('#usersTable tr');
+const searchInput = document.getElementById("searchUsers");
+const tableBody = document.getElementById("usersTable");
+
+if (searchInput) {
+  searchInput.addEventListener("keyup", function () {
+    const keyword = this.value.toLowerCase();
+    const rows = tableBody.querySelectorAll("tr");
 
     rows.forEach(row => {
       const text = row.innerText.toLowerCase();
-      row.style.display = text.includes(filter) ? '' : 'none';
+      row.style.display = text.includes(keyword) ? "" : "none";
     });
   });
+}
+
 
   // ================= DATE FORMAT =================
   function formatDate(dateStr) {

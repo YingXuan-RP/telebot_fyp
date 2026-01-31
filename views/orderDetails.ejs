@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Order #<%= order.id %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+
+    <div class="sidebar-header">
+        <h2>🤖 TeleBuy Admin</h2>
+    </div>
+
+    <nav class="sidebar-nav">
+
+        <a href="/admin/homepage" class="nav-item">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Home</span>
+        </a>
+
+        <a href="/admin/categories" class="nav-item">
+            <span class="nav-icon">📁</span>
+            <span class="nav-text">Categories</span>
+        </a>
+
+        <!-- Products Dropdown (KEEP) -->
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-toggle">
+                <div style="display:flex;align-items:center;">
+                    <span class="nav-icon">🛍️</span>
+                    <span class="nav-text">Products</span>
+                </div>
+                <span class="dropdown-arrow">▶</span>
+            </button>
+
+            <div class="nav-submenu">
+                <a href="/admin/products" class="nav-item">All Products</a>
+                <a href="/admin/inventory" class="nav-item">Inventory</a>
+            </div>
+        </div>
+
+        <!-- Customers -->
+        <a href="/users" class="nav-item">
+            <span class="nav-icon">👥</span>
+            <span class="nav-text">Customers</span>
+        </a>
+
+        <!-- ✅ Orders (NOW SIMPLE LINK) -->
+        <a href="/orders" class="nav-item">
+            <span class="nav-icon">📦</span>
+            <span class="nav-text">Orders</span>
+        </a>
+
+        <a href="/discounts" class="nav-item">
+            <span class="nav-icon">🏷️</span>
+            <span class="nav-text">Discounts</span>
+        </a>
+
+        <a href="/analytics" class="nav-item">
+            <span class="nav-icon">📈</span>
+            <span class="nav-text">Analytics</span>
+        </a>
+
+    </nav>
+
+    <!-- Notifications -->
+    <div class="sidebar-notifications">
+        <div class="notifications-header">
+            <span>Notifications</span>
+            <span class="notifications-count" id="notifCount"></span>
+        </div>
+
+        <div class="notifications-list" id="notificationsList"></div>
+    </div>
+
+    <form action="/logout" method="POST">
+        <button type="submit" class="btn btn-secondary btn-block">
+            Logout
+        </button>
+    </form>
+
+</aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <div class="content-header">
+      <h1>Order #<%= order.id %></h1>
+    </div>
+
+    <!-- ORDER SUMMARY CARD -->
+    <div class="card" style="max-width:900px;">
+
+      <div class="order-summary-grid">
+        <div>
+          <div class="label">Customer</div>
+          <div class="value"><%= order.full_name %></div>
+        </div>
+
+        <div>
+          <div class="label">Status</div>
+          <span class="status-badge <%= order.status %>">
+            <%= order.status %>
+          </span>
+        </div>
+
+        <div>
+          <div class="label">Order Date</div>
+          <div class="value">
+            <%= new Date(order.order_date).toLocaleString() %>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ITEMS CARD -->
+    <div class="card" style="max-width:900px;margin-top:20px;">
+
+      <h2 style="margin-bottom:15px;">Items Purchased</h2>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% items.forEach(item => { %>
+              <tr>
+                <td><strong><%= item.product_name %></strong></td>
+                <td><%= item.quantity %></td>
+                <td>$<%= Number(item.price).toFixed(2) %></td>
+                <td>$<%= Number(item.subtotal).toFixed(2) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TOTAL -->
+      <div class="order-total">
+        Total: $<%= Number(order.total).toFixed(2) %>
+      </div>
+
+      <a href="/orders" class="btn btn-secondary" style="margin-top:15px;">
+        ← Back to Orders
+      </a>
+
+    </div>
+
+  </main>
+</div>
+<script src="/js/common.js"></script>
+<script src="/js/orders.js"></script>
+</body>
+</html>

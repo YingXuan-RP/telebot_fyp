@@ -1,11 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+
   const timeSelect = document.getElementById('timePeriod');
 
-  let salesChart, sessionsChart, conversionChart;
+  let salesChart;
+  let topProductsChart;
+  let categoryRevenueChart;
 
-  /* ------------------------------
-     Helpers
-  ------------------------------ */
+  /* ================= HELPERS ================= */
 
   function generateLabels(days) {
     const labels = [];
@@ -14,30 +15,63 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
+
       labels.push(
-        d.toLocaleDateString('en-SG', { day: '2-digit', month: 'short' })
+        d.toLocaleDateString('en-SG', {
+          day: '2-digit',
+          month: 'short'
+        })
       );
     }
+
     return labels;
   }
 
-  function destroyCharts() {
-    salesChart?.destroy();
-    sessionsChart?.destroy();
-    conversionChart?.destroy();
+  /* ================= SUMMARY ================= */
+
+  async function loadSummary(period) {
+    try {
+      const res = await fetch(`/api/analytics/summary?period=${period}`);
+      const data = await res.json();
+
+      // Gross Sales
+      document.getElementById('analyticsRevenue').textContent =
+        `SGD ${Number(data.revenue || 0).toFixed(2)}`;
+
+      // Total Customers
+      document.getElementById('analyticsCustomers').textContent =
+        data.customers ?? 0;
+
+      // Orders
+      document.getElementById('analyticsTotalOrders').textContent =
+        data.orders ?? 0;
+
+    } catch (err) {
+      console.error('Summary load failed:', err);
+    }
   }
 
-  /* ------------------------------
-     Charts (EMPTY / REAL STATE)
-     Backend will replace data later
-  ------------------------------ */
+  /* ================= SALES OVER TIME ================= */
 
-  function renderCharts(labels) {
-    const emptyData = labels.map(() => 0);
+  async function loadSalesTimeline(period, labels) {
 
-    destroyCharts();
+    const res = await fetch(`/api/analytics/sales-over-time?period=${period}`);
+    const salesTimeline = await res.json();
 
-    // -------- Sales over time --------
+    const salesData = labels.map(label => {
+      const found = salesTimeline.find(row => {
+        const d = new Date(row.date);
+        const formatted = d.toLocaleDateString('en-SG', {
+          day: '2-digit',
+          month: 'short'
+        });
+        return formatted === label;
+      });
+      return found ? Number(found.revenue) : 0;
+    });
+
+    if (salesChart) salesChart.destroy();
+
     salesChart = new Chart(
       document.getElementById('salesOverTimeChart'),
       {
@@ -46,143 +80,116 @@ document.addEventListener('DOMContentLoaded', () => {
           labels,
           datasets: [{
             label: 'Sales',
-            data: emptyData,
+            data: salesData,
             borderColor: '#2563eb',
-            backgroundColor: 'rgba(37,99,235,0.12)',
-            borderWidth: 2,
-            pointRadius: 2,
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              min: 0,
-              suggestedMax: 1
-            }
-          },
-          plugins: {
-            legend: { display: false }
-          }
-        }
-      }
-    );
-
-    // -------- Sessions over time --------
-    sessionsChart = new Chart(
-      document.getElementById('sessionsChart'),
-      {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Sessions',
-            data: emptyData,
-            backgroundColor: '#10b981'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              min: 0,
-              suggestedMax: 1
-            }
-          },
-          plugins: {
-            legend: { display: false }
-          }
-        }
-      }
-    );
-
-    // -------- Conversion rate --------
-    conversionChart = new Chart(
-      document.getElementById('conversionChart'),
-      {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Conversion Rate',
-            data: emptyData,
-            borderColor: '#f59e0b',
-            borderWidth: 2,
-            pointRadius: 2,
+            backgroundColor: 'rgba(37,99,235,0.15)',
+            fill: true,
             tension: 0.3
           }]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false
+        }
+      }
+    );
+  }
+
+  /* ================= TOP PRODUCTS ================= */
+
+  async function loadTopProducts(period) {
+
+    const res = await fetch(`/api/analytics/top-products?period=${period}`);
+    const data = await res.json();
+
+    const labels = data.map(p => p.name);
+    const values = data.map(p => Number(p.total_sold));
+
+    if (topProductsChart) topProductsChart.destroy();
+
+    topProductsChart = new Chart(
+      document.getElementById('sellingProductsChart'),
+      {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Units Sold',
+            data: values,
+            backgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      }
+    );
+  }
+
+  /* ================= REVENUE BY CATEGORY ================= */
+
+  async function loadRevenueByCategory(period) {
+
+    const res = await fetch(`/api/analytics/revenue-by-category?period=${period}`);
+    const data = await res.json();
+
+    const labels = data.map(r => r.category);
+    const values = data.map(r => Number(r.revenue));
+
+    if (categoryRevenueChart) categoryRevenueChart.destroy();
+
+    categoryRevenueChart = new Chart(
+      document.getElementById('revenueCategoryChart'),
+      {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              '#2563eb',
+              '#10b981',
+              '#f59e0b',
+              '#ef4444',
+              '#8b5cf6',
+              '#06b6d4',
+              '#f97316'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: {
-              min: 0,
-              suggestedMax: 1,
-              ticks: {
-                callback: v => v + '%'
-              }
-            }
-          },
           plugins: {
-            legend: { display: false }
+            legend: { position: 'bottom' }
           }
         }
       }
     );
   }
 
-  /* ------------------------------
-     REAL SUMMARY (from backend)
-     Frontend DOES NOT decide values
-  ------------------------------ */
+  /* ================= MAIN RENDER ================= */
 
-  async function loadSummary() {
-    try {
-      const res = await fetch('/api/analytics/summary');
-      const data = await res.json();
+  async function renderAnalytics() {
 
-      document.getElementById('analyticsRevenue').textContent =
-        `SGD ${data.revenue}`;
-
-      document.getElementById('analyticsTotalOrders').textContent =
-        data.orders;
-
-      document.getElementById('ordersFulfilled').textContent =
-        data.fulfilled;
-
-      document.getElementById('returningRate').textContent =
-        `${data.returningRate}%`;
-
-    } catch (err) {
-      console.error('Analytics summary error:', err);
-    }
-  }
-
-  /* ------------------------------
-     Main render
-  ------------------------------ */
-
-  function renderAnalytics() {
-    const days =
-      timeSelect.value === 'today' ? 1 : Number(timeSelect.value);
-
+    const period = timeSelect?.value || 'today';
+    const days = period === 'today' ? 1 : Number(period);
     const labels = generateLabels(days);
 
-    // Charts render even with no data
-    renderCharts(labels);
-
-    // Summary comes ONLY from backend
-    loadSummary();
+    await loadSummary(period);
+    await loadSalesTimeline(period, labels);
+    await loadTopProducts(period);
+    await loadRevenueByCategory(period);
   }
 
-  // Initial load
+  /* ================= INIT ================= */
+
+  if (timeSelect) {
+    timeSelect.value = 'today';
+    timeSelect.addEventListener('change', renderAnalytics);
+  }
+
   renderAnalytics();
 
-  // Reload on dropdown change
-  timeSelect.addEventListener('change', renderAnalytics);
 });

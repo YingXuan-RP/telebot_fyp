@@ -487,6 +487,71 @@ body {
 }
 
 /* ====================================
+Users Table Enhancements
+   ==================================== */
+/* Users table row refinement */
+.data-table tbody tr {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: #f1f5f9;
+  box-shadow: inset 4px 0 0 var(--primary-color);
+}
+
+/* Users table row refinement */
+.data-table tbody tr {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: #f1f5f9;
+  box-shadow: inset 4px 0 0 var(--primary-color);
+}
+/* Action buttons alignment */
+.data-table td:last-child {
+  text-align: right;
+}
+
+.btn.view-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+
+
+
+/* User table hover polish */
+.data-table tbody tr:hover {
+  background: #f1f5f9;
+  box-shadow: inset 4px 0 0 var(--primary-color);
+}
+
+/* Center action buttons */
+.data-table td:last-child {
+  text-align: center;
+}
+
+/* Make email visually lighter */
+.data-table td.text-muted {
+  font-size: 13px;
+}
+
+/* === Fix Actions column alignment === */
+.data-table th:last-child,
+.data-table td:last-child {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Make action buttons align perfectly */
+.data-table td:last-child .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ====================================
    Badges
    ==================================== */
 .badge {
@@ -943,28 +1008,7 @@ body {
     font-size: 80px;
 }
 
-/* Modern Stat Cards */
-.stat-card-blue {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    position: relative;
-    overflow: hidden;
-}
 
-.stat-card-green {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-}
-
-.stat-card-purple {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-}
-
-.stat-card-orange {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-}
 
 .stat-card-header {
     display: flex;
@@ -998,12 +1042,21 @@ body {
     background: rgba(239, 68, 68, 0.1);
 }
 
+/* ====================================
+   FINAL STAT CARD TEXT FIX
+   ==================================== */
+
 .stat-card h3 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: white;
+  color: var(--text-primary) !important;   /* Dark text */
+  font-size: 30px;
+  font-weight: 800;
 }
+
+.stat-card p {
+  color: var(--text-secondary) !important;
+  font-size: 14px;
+}
+
 
 .stat-card p {
     opacity: 0.9;
@@ -1850,13 +1903,22 @@ body {
     gap: 16px;
 }
 
+/* Search input enhancement */
 .search-input {
-    padding: 10px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 14px;
-    width: 100%;
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 24 24'%3E%3Cpath d='M21 20l-5.6-5.6a7 7 0 10-1.4 1.4L20 21zM5 11a6 6 0 1112 0 6 6 0 01-12 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 18px;
+  background-position: 12px center;
+
+  transition: all 0.2s ease;
 }
+
 
 .search-input:focus {
     outline: none;
@@ -2453,12 +2515,7 @@ textarea.form-control-lg {
   gap: 10px;
 }
 
-.stat-card h3 {
-  font-size: 34px;
-  font-weight: 800;
-  margin-top: 12px;
-  color: #ffffff;
-}
+
 
 .stat-card p {
   font-size: 14px;
@@ -2564,3 +2621,134 @@ textarea.form-control-lg {
   border: none;
 }
 
+.page-title-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.page-title-link:hover {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.category-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 400; /* not bold */
+  transition: color 0.15s ease;
+}
+
+.category-link:hover {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+
+/* Status badge (Active / Inactive) */
+.status-active,
+.status-inactive {
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px; /* fully rounded pill */
+  text-align: center;
+  min-width: 70px;
+}
+
+/* Active */
+.status-active {
+  background-color: #dcfce7; /* light green */
+  color: #15803d;            /* dark green text */
+}
+
+/* Inactive */
+.status-inactive {
+  background-color: #fee2e2; /* light red */
+  color: #991b1b;            /* dark red text */
+}
+
+.btn-danger {
+  background: #ef4444;
+  border: 1px solid #ef4444;
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.category-bar { margin-bottom:18px; }
+
+.category-label {
+display:flex;
+justify-content:space-between;
+font-size:14px;
+margin-bottom:6px;
+}
+
+.category-bar-bg {
+width:100%;
+height:14px;
+background:#e5e7eb;
+border-radius:8px;
+overflow:hidden;
+}
+
+.category-bar-fill {
+height:100%;
+background:linear-gradient(90deg,#3b82f6,#2563eb);
+transition:0.5s;
+}
+
+
+/* Order summary grid */
+.order-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.order-summary-grid .label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.order-summary-grid .value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Order total */
+.order-total {
+  text-align: right;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+/* Status badges */
+.status-badge.paid {
+  background: #e6f7ee;
+  color: #0f9d58;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.status-badge.completed {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+
+.status-badge.pending {
+  background: #fff4e5;
+  color: #f29900;
+}
+
+.status-badge.cancelled {
+  background: #fdecea;
+  color: #d93025;
+}
